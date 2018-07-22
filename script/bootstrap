@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+if ! [[ -f .dkrc ]]; then
+    echo "Please run this script from the project root directory." >&2
+    exit 64  # EX_USAGE
+fi
+
+if ! [[ -d .devkit ]]; then
+    # Modify this line if you want to pin a particular .devkit revision:
+    git clone -q --depth 1 https://github.com/bashup/.devkit
+fi
+
+exec ".devkit/dk" "$(basename "$0")" "$@"

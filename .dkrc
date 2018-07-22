@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# ---
+# Add your own commands, functions, and variables here.  Define defaults first,
+# then `dk use:` the desired devkit modules, and then define any overrides to
+# the devkit defaults.
+# ---
+
+# Available modules (uncomment to use):
+
+dk use: cram              # run tests using the "cram" functional test tool
+dk use: entr-watch        # watch files and re-run tests or other commands
+dk use: shell-console     # make the "console" command enter a subshell
+dk use: bash32            # enable doing tests/console/etc. in bash3.2 w/docker
+
+# Define overrides, new commands, functions, etc. here:
+
+event off "cram_files" cram.files      # skip default files
+event on  "cram_files" echo README.md  # just test README
+
+before "test" export PATH="$LOCO_ROOT:$PATH"   # put dotenv on PATH
