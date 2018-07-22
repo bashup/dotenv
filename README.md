@@ -1,11 +1,11 @@
-## dotenv: read and edit .env files from bash
+# dotenv: read and edit .env files from bash
 
 .env files are a handy convention for configuring applications (especially with docker-compose).  But when you're writing shell scripts, it can be hard to modify or parse them.  (Especially the ones in [docker-compose format](https://docs.docker.com/compose/compose-file/#env_file)!)
 
-`dotenv` is a shell scripting tool for manipulating `.env` files formatted like this:
+`dotenv` is a tiny bash scripting tool for manipulating `.env` files formatted like this:
 
 ```ini
-# Lines are comments OR key=vale pairs; leading and
+# Lines are comments OR key=value pairs; leading and
 # trailing whitespace is stripped
   FOO=bar
 
@@ -19,11 +19,40 @@ This format is exactly how docker-compose parses `.env` and `env_files`, so this
 
 (Note: if you need to read or write `.env` files that *aren't* in docker-compose syntax (e.g. shell dotfiles), you'll have to escape the values you write and unescape the ones you read, using whatever syntax is compatible with the other tools using the file.  Also, multi-line values can't be used unless the other tools can encode encode/decode linefeeds in such a way that the encoded form doesn't contain any actual linefeeds.)
 
-There are two ways to use `dotenv`:
+**Contents**
 
-* As a command line tool:
+<!-- toc -->
 
-  ```sh
+- [Installation, Requirements And Use](#installation-requirements-and-use)
+  * [The `dotenv` CLI](#the-dotenv-cli)
+  * [The `.env` shell function](#the-env-shell-function)
+  * [File Selection](#file-selection)
+    + [`-f` | `--file` *filename*](#-f----file-filename)
+  * [Read Operations](#read-operations)
+    + [`get` *key*](#get-key)
+    + [`parse` *[keys...]*](#parse-keys)
+    + [`export` *[keys...]*](#export-keys)
+  * [Write Operations](#write-operations)
+    + [`set` [+]*key*[=*value*]...](#set-keyvalue)
+    + [`puts` *string*](#puts-string)
+    + [`generate` *key command [args...]*](#generate-key-command-args)
+- [License](#license)
+
+<!-- tocstop -->
+
+## Installation, Requirements And Use
+
+To install dotenv, you can copy and paste the [code](dotenv) into your script, or download it, `chmod +x` it and save it somewhere on your `PATH`.  (if you have [basher](https://github.com/basherpm/basher), you can `basher install bashup/dotenv` to automatically install it.)
+
+The code is licensed CC0, so you are not required to add any attribution or copyright notices to your project.  The only external commands it uses are `cp -p` and `mv`, and it's compatible with bash 3.2+, so it should work even on plain OS X, busybox, or pretty much anything else that can run bash.
+
+Once you've got it installed, there are two ways you can use it: as a command line tool (`dotenv`), or a bash function (`.env`).
+
+### The `dotenv` CLI
+
+To interactively manipulate .env files, you can run `dotenv` as a command line tool, e.g.:
+
+```console
     $ dotenv --help
     Usage:
       dotenv [-f|--file FILE] COMMAND [ARGS...]
@@ -45,64 +74,50 @@ There are two ways to use `dotenv`:
 
     $ echo '  # This is my .env file' >prod.env
     $ echo '  FOO=bar  ' >>prod.env
+
     $ cat prod.env
       # This is my .env file
       FOO=bar  
 
     $ dotenv -f prod.env get FOO
     bar
-  ```
+```
 
-* Or as a shell function:
+### The `.env` shell function
 
-  ```sh
-  # Source to get the .env function:
+To manipulate .env files from within a shell script, you can source `dotenv` and then use the `.env` shell function.  The key differences are that:
+
+* `.env` keeps the last `.env` or `--file` contents in memory for faster reads  (using `--file` again will force a reload)
+* `.env` returns results in the bash `$REPLY` variable rather than writing them to standard output, and
+* the `export` subcommand actually sets and exports shell variables, rather than outputting `export` commands
+
+```sh
+# Source to get the .env function:
+
     $ source dotenv
 
-  # It takes the same arguments as `dotenv`:
-    $ .env -f prod.env get FOO
+# It takes the same arguments as `dotenv`:
 
-  # But output is to the REPLY variable instead of stdout:
+    $ .env --file prod.env get FOO
+
+# But output is to the REPLY variable instead of stdout:
+
     $ echo "$REPLY"
     bar
 
-  # And the selected --file is "sticky" from one call to the next:
-    $ .env set FOO=wat BAR=baz
+# And the selected --file is "sticky" from one call to the next:
+
+    $ .env set FOO=wat BAR=baz  # still using --file prod.env
+
     $ cat prod.env
       # This is my .env file
       FOO=wat
     BAR=baz
-  ```
-
-
-**Contents**
-
-<!-- toc -->
-
-  * [Installation, Requirements And Use](#installation-requirements-and-use)
-  * [File Selection](#file-selection)
-    + [-f | --file *filename*](#-f----file-filename)
-  * [Read Operations](#read-operations)
-    + [get *key*](#get-key)
-    + [parse *[keys...]*](#parse-keys)
-    + [export *[keys...]*](#export-keys)
-  * [Write Operations](#write-operations)
-    + [set [+]*key*[=*value*]...](#set-keyvalue)
-    + [puts *string*](#puts-string)
-    + [generate *key command [args...]*](#generate-key-command-args)
-- [License](#license)
-
-<!-- tocstop -->
-
-### Installation, Requirements And Use
-
-Copy and paste the [code](dotenv) into your script, or place it on `PATH` and either  `source dotenv` to access the `.env` function, or invoke `dotenv` directly.  (if you have [basher](https://github.com/basherpm/basher), you can `basher install bashup/dotenv` to get it installed on your `PATH`.)  The code is licensed CC0, so you are not required to add any attribution or copyright notices to your project.
-
-The code's only extenal requirements are `cp -p` and `mv`, and bash 3.2+, so it should work on plain OS X, busybox, or pretty much anything else.
+```
 
 ### File Selection
 
-#### -f | --file *filename*
+#### `-f` | `--file` *filename*
 
 By default, all operations read or write to `.env` in the current directory at the time of the operation.  Using this option changes the active file to *filename*, and loads its current contents.  The in-memory contents are then used for any subsequent operations other than `set` (which reloads the file before making any changes).
 
@@ -112,7 +127,7 @@ A non-existent file is silently considered to be empty; file read errors result 
 
 The following operations return their result in `REPLY` (or `REPLY[@]` for multiple results) when called via the `.env` shell function, or output one or more lines to stdout when invoked via the `dotenv` command.  Success is returned if there is at least one result, failure otherwise.
 
-#### get *key*
+#### `get` *key*
 
 Retrieve the value of *key* from the in-memory file.  Returns success if the key is found, failure otherwise.
 
@@ -124,27 +139,30 @@ Retrieve the value of *key* from the in-memory file.  Returns success if the key
     no such key
 ```
 
-#### parse *[keys...]*
+#### `parse` *[keys...]*
 
 Return the parsed `KEY=value` pairs from the in-memory file, trimming whitespace and skipping blank lines and comments.  If *keys* are given, only return lines with matching keys (in their in-file order).  If no suitable lines are found, return failure.
 
 ```sh
 # .env returns results as an array in REPLY:
+
     $ .env parse
     $ printf '%s\n' "${REPLY[@]}"
     FOO=wat
     BAR=baz
 
 # Restricted to given keys, if any:
+
     $ .env parse FLIM FOO FLAM; printf '%s\n' "${REPLY[@]}"
     FOO=wat
 
 # Returning failure if there are no matches:
+
     $ .env parse FLIM FLAM || echo "nothing found"
     nothing found
 ```
 
-#### export *[keys...]*
+#### `export` *[keys...]*
 
 Export the values found in the file as environment variables (restricted to those named in *keys*, if given).  When used on the command line, output the key-value pairs in a format suitable for `eval`-ing.  Success is returned unless `export` fails due to invalid characters found in a key.
 
@@ -177,7 +195,7 @@ Export the values found in the file as environment variables (restricted to thos
 
 ### Write Operations
 
-#### set [+]*key*[=*value*]...
+#### `set` [+]*key*[=*value*]...
 
 Edit the .env file atomically in place, writing to a `.bak` file and then replacing the original.  (Like sed, this replaces a symlink with a regular file.  (Unless you're using it as a shell function and have also sourced [realpaths](https://github.com/bashup/realpaths), in which case the backup and overwrite are done in the symlinked directory.)
 
@@ -189,6 +207,7 @@ Each argument passed must be match one of the following patterns:
 
   ```sh
     $ .env set +FLIM="flam" +FOO="already set, won't change"
+
     $ dotenv -f prod.env export FLIM FOO
     export FOO=bar\ baz
     export FLIM=flam
@@ -198,7 +217,9 @@ Each argument passed must be match one of the following patterns:
 
   ```sh
   # Unset keys if they exist:
+
     $ .env set BING FOO FLIM
+
     $ cat prod.env
       # This is my .env file
     BAR=baz
@@ -207,7 +228,7 @@ Each argument passed must be match one of the following patterns:
 
 Comment lines in the file are unchanged.  The file is reloaded from disk immediately before making the changes, and is only rewritten if the contents actually changed.  (That is, if you set values that already exist or delete values that don't, the file is not rewritten.)
 
-#### puts *string*
+#### `puts` *string*
 
 Append *string* to the .env file *and* its in-memory representation:
 
@@ -231,7 +252,7 @@ Append *string* to the .env file *and* its in-memory representation:
     FLIM=flam
 ```
 
-#### generate *key command [args...]*
+#### `generate` *key command [args...]*
 
 Sets *key* to the output of running *command args...* unless there is an existing value for *key* (in which case *command* is not run).  The new (or existing) value of *key* is returned, and the result is a success unless *command* was run and failed.  With a suitable *command*, this can be used to generate default passwords, hash keys, etc.
 
