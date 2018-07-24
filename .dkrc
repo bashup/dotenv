@@ -11,6 +11,14 @@ dk use: cram              # run tests using the "cram" functional test tool
 dk use: entr-watch        # watch files and re-run tests or other commands
 dk use: shell-console     # make the "console" command enter a subshell
 dk use: bash32            # enable doing tests/console/etc. in bash3.2 w/docker
+dk use: shellcheck        # support running shellcheck (via docker if not installed)
+
+# Define overrides, new commands, functions, etc. here:
+
+# SC2128 = array/string mixing
+# SC2145 = prefix or suffix on "$@" or other array
+# SC2178 = array/string mixing
+SHELLCHECK_OPTS='-e SC2128,SC2145,SC2178'
 
 # Define overrides, new commands, functions, etc. here:
 
@@ -18,3 +26,4 @@ event off "cram_files" cram.files      # skip default files
 event on  "cram_files" echo README.md  # just test README
 
 before "test" export PATH="$LOCO_ROOT:$PATH"   # put dotenv on PATH
+on     "test" dk shellcheck dotenv

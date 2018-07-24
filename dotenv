@@ -35,7 +35,7 @@ Write Commands:
 
 .env.get() {
 	.env::arg "get requires a key" "$@" &&
-	[[ "$__dotenv" =~ ^(.*(^|$'\n'))([ ]*)"$1="([^\n].*)$ ]] &&
+	[[ "$__dotenv" =~ ^(.*(^|$'\n'))([ ]*)"$1="(.*)$ ]] &&
 	REPLY=${BASH_REMATCH[4]%%$'\n'*} && REPLY=${REPLY%"${REPLY##*[![:space:]]}"}
 }
 
