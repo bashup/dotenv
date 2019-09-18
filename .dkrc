@@ -10,7 +10,7 @@
 dk use: cram              # run tests using the "cram" functional test tool
 dk use: entr-watch        # watch files and re-run tests or other commands
 dk use: shell-console     # make the "console" command enter a subshell
-dk use: bash32            # enable doing tests/console/etc. in bash3.2 w/docker
+dk use: bash-kit          # enable doing tests/console/etc. in bash3.2 w/docker
 dk use: shellcheck        # support running shellcheck (via docker if not installed)
 
 # Define overrides, new commands, functions, etc. here:
@@ -25,5 +25,12 @@ SHELLCHECK_OPTS='-e SC2128,SC2145,SC2178'
 event off "cram_files" cram.files      # skip default files
 event on  "cram_files" echo README.md  # just test README
 
-before "test" export PATH="$LOCO_ROOT:$PATH"   # put dotenv on PATH
 on     "test" dk shellcheck dotenv
+
+
+build-dotenv() {
+	mdsh --out "$1" --compile dotenv-cli.md && chmod +x "$1"
+}
+
+before test  build-dotenv "$BASHER_INSTALL_BIN"/dotenv
+on     build build-dotenv dotenv
